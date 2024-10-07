@@ -5,51 +5,55 @@ package provider
 
 import (
 	"context"
-	"net/http"
+	"os"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
-	"github.com/hashicorp/terraform-plugin-framework/function"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/trois-six/smc"
 )
 
-// Ensure ScaffoldingProvider satisfies various provider interfaces.
-var _ provider.Provider = &ScaffoldingProvider{}
-var _ provider.ProviderWithFunctions = &ScaffoldingProvider{}
+// Ensure SMCProvider satisfies various provider interfaces.
+var _ provider.Provider = &SMCProvider{}
 
-// ScaffoldingProvider defines the provider implementation.
-type ScaffoldingProvider struct {
+// SMCProvider defines the provider implementation.
+type SMCProvider struct {
 	// version is set to the provider version on release, "dev" when the
 	// provider is built and ran locally, and "test" when running acceptance
 	// testing.
 	version string
 }
 
-// ScaffoldingProviderModel describes the provider data model.
-type ScaffoldingProviderModel struct {
-	Endpoint types.String `tfsdk:"endpoint"`
+// SMCProviderModel describes the provider data model.
+type SMCProviderModel struct {
+	Hostname types.String `tfsdk:"hostname"`
+	APIKey   types.String `tfsdk:"api_key"`
 }
 
-func (p *ScaffoldingProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "scaffolding"
+func (p *SMCProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+	resp.TypeName = "SMC"
 	resp.Version = p.version
 }
 
-func (p *ScaffoldingProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (p *SMCProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"endpoint": schema.StringAttribute{
-				MarkdownDescription: "Example provider attribute",
-				Optional:            true,
+			"hostname": schema.StringAttribute{
+				MarkdownDescription: "Hostname to connect to the SMC Management API",
+			},
+			"api_key": schema.StringAttribute{
+				MarkdownDescription: "API Key to connect to the SMC Management API",
+				Sensitive:           true,
 			},
 		},
 	}
 }
 
-func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data ScaffoldingProviderModel
+func (p *SMCProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
+	var data SMCProviderModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
@@ -57,36 +61,91 @@ func (p *ScaffoldingProvider) Configure(ctx context.Context, req provider.Config
 		return
 	}
 
-	// Configuration values are now available.
-	// if data.Endpoint.IsNull() { /* ... */ }
+	if data.Hostname.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("hostname"),
+			"Unknown SMC hostname",
+			"The provider cannot create the SMC client as there is an unknown configuration value for the SMC hostname. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the SMC_HOSTNAME environment variable.",
+		)
+	}
 
-	// Example client configuration for data sources and resources
-	client := http.DefaultClient
+	if data.APIKey.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("api_key"),
+			"Unknown API Key hostname",
+			"The provider cannot create the SMC client as there is an unknown configuration value for the SMC API Key. "+
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the SMC_API_KEY environment variable.",
+		)
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	hostname := os.Getenv("SMC_HOSTNAME")
+	apiKey := os.Getenv("SMC_API_KEY")
+
+	if !data.Hostname.IsNull() {
+		hostname = data.Hostname.ValueString()
+	}
+
+	if !data.APIKey.IsNull() {
+		apiKey = data.APIKey.ValueString()
+	}
+
+	if hostname == "" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("hostname"),
+			"Missing SMC hostname",
+			"The provider cannot create the SMC client as there is a missing or empty value for the SMC hostname. "+
+				"Set the hostname value in the configuration or use the SMC_HOSTNAME environment variable. "+
+				"If either is already set, ensure the value is not empty.",
+		)
+	}
+
+	if data.APIKey.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("api_key"),
+			"Missing SMC API Key",
+			"The provider cannot create the SMC client as there is a missing or empty value for the SMC API Key. "+
+				"Set the hostname value in the configuration or use the SMC_API_KEY environment variable. "+
+				"If either is already set, ensure the value is not empty.")
+	}
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Create a new SMC client using the configuration values
+	client, err := smc.NewClient(&hostname, &apiKey)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Create SMC Client",
+			"An unexpected error occurred when creating the SMC client. "+
+				"If the error is not clear, please contact the provider developers.\n\n"+
+				"SMC Client Error: "+err.Error(),
+		)
+		return
+	}
+
 	resp.DataSourceData = client
 	resp.ResourceData = client
 }
 
-func (p *ScaffoldingProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewExampleResource,
-	}
+func (p *SMCProvider) Resources(ctx context.Context) []func() resource.Resource {
+	return []func() resource.Resource{}
 }
 
-func (p *ScaffoldingProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+func (p *SMCProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
-		NewExampleDataSource,
-	}
-}
-
-func (p *ScaffoldingProvider) Functions(ctx context.Context) []func() function.Function {
-	return []func() function.Function{
-		NewExampleFunction,
+		NewAccountDataSource,
 	}
 }
 
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
-		return &ScaffoldingProvider{
+		return &SMCProvider{
 			version: version,
 		}
 	}
