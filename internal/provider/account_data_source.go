@@ -34,7 +34,7 @@ type AccountDataSourceModel struct {
 	Folders     []types.String `tfsdk:"folders"`
 	Identifier  types.String   `tfsdk:"identifier"`
 	Kind        types.String   `tfsdk:"kind"`
-	LocalAuth   types.Bool     `tfsdk:"localAuth"`
+	LocalAuth   types.Bool     `tfsdk:"local_auth"`
 	Name        types.String   `tfsdk:"name"`
 	Permissions []types.String `tfsdk:"permissions"`
 }
@@ -77,7 +77,7 @@ func (d *AccountDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 				MarkdownDescription: "Account kind",
 				Computed:            true,
 			},
-			"localAuth": schema.BoolAttribute{
+			"local_auth": schema.BoolAttribute{
 				MarkdownDescription: "Account local authentication",
 				Computed:            true,
 			},
