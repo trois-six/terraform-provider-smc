@@ -75,9 +75,11 @@ func (d *AccountDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 			},
 			"kind": schema.StringAttribute{
 				MarkdownDescription: "Account kind",
+				Computed:            true,
 			},
 			"localAuth": schema.BoolAttribute{
 				MarkdownDescription: "Account local authentication",
+				Computed:            true,
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "Account name",
