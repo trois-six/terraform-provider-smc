@@ -1,6 +1,6 @@
 # Terraform Provider SMC
 
-This is the Stormshield SMC Terraform Prodiver. It allows you to manage your Stormshield SMC configuration using Terraform.
+This is the Stormshield SMC Terraform Provider. It allows to manage your Stormshield SMC configuration using Terraform.
 
 ## Requirements
 
