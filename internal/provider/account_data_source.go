@@ -140,10 +140,10 @@ func (d *AccountDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	for _, folder := range account.Folders {
 		data.Folders = append(data.Folders, types.StringValue(folder))
 	}
-	data.Identifier = types.StringValue(account.Identifier)
-	data.Kind = types.StringValue(account.Kind)
-	data.LocalAuth = types.BoolValue(account.LocalAuth)
-	data.Name = types.StringValue(account.Name)
+	data.Identifier = types.StringValue("identifier")
+	data.Kind = types.StringValue("kind")
+	data.LocalAuth = types.BoolValue("localAuth")
+	data.Name = types.StringValue("name")
 	for _, permission := range account.Permissions {
 		data.Permissions = append(data.Permissions, types.StringValue(permission))
 	}
