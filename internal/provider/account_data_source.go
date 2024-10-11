@@ -132,48 +132,43 @@ func (d *AccountDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	if account.StatusCode() != http.StatusOK || account.JSON200 == nil {
+	if account.StatusCode() != http.StatusOK {
+		resp.Diagnostics.AddError(
+			"HTTP Error Reading SMC Account",
+			"HTTP status code "+account.Status()+" returned for SMC account identifier "+data.Identifier.ValueString(),
+		)
 		return
 	}
 
-	data.UUID = types.StringValue(account.JSON200.Uuid)
-
-	if account.JSON200.Description != nil {
-		data.Description = types.StringValue(*account.JSON200.Description)
+	if account.JSON200 == nil {
+		if !data.Identifier.IsNull() {
+			resp.Diagnostics.AddError(
+				"No results Reading SMC Account",
+				"No results returned for given identifier: "+data.Identifier.ValueString(),
+			)
+		}
+		return
 	}
 
-	if account.JSON200.Dn != nil {
-		data.DN = types.StringValue(*account.JSON200.Dn)
-	}
+	item := account.JSON200
+	data.UUID = types.StringValue(item.Uuid)
+	data.Description = types.StringPointerValue(item.Description)
+	data.DN = types.StringPointerValue(item.Dn)
+	data.Email = types.StringPointerValue(item.Email)
 
-	if account.JSON200.Email != nil {
-		data.Email = types.StringValue(*account.JSON200.Email)
-	}
-
-	if account.JSON200.Folders != nil {
-		for _, folder := range *account.JSON200.Folders {
+	if item.Folders != nil {
+		for _, folder := range *item.Folders {
 			data.Folders = append(data.Folders, types.StringValue(folder))
 		}
 	}
 
-	if account.JSON200.Identifier != nil {
-		data.Identifier = types.StringValue(*account.JSON200.Identifier)
-	}
+	data.Identifier = types.StringPointerValue(item.Identifier)
+	data.Kind = types.StringPointerValue(item.Kind)
+	data.LocalAuth = types.BoolPointerValue(item.LocalAuth)
+	data.Name = types.StringPointerValue(item.Name)
 
-	if account.JSON200.Kind != nil {
-		data.Kind = types.StringValue(*account.JSON200.Kind)
-	}
-
-	if account.JSON200.LocalAuth != nil {
-		data.LocalAuth = types.BoolValue(*account.JSON200.LocalAuth)
-	}
-
-	if account.JSON200.Name != nil {
-		data.Name = types.StringValue(*account.JSON200.Name)
-	}
-
-	if account.JSON200.Permissions != nil {
-		for _, permission := range *account.JSON200.Permissions {
+	if item.Permissions != nil {
+		for _, permission := range *item.Permissions {
 			data.Permissions = append(data.Permissions, types.StringValue(string(permission)))
 		}
 	}
