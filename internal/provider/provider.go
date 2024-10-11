@@ -118,7 +118,7 @@ func (p *SMCProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	}
 
 	// Create a new SMC client using the configuration values
-	client, err := smc.NewClient(&hostname, &apiKey)
+	client, err := smc.NewSMCClientWithResponses(hostname, apiKey)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create SMC Client",

@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -22,7 +23,7 @@ func NewAccountDataSource() datasource.DataSource {
 
 // AccountDataSource defines the data source implementation.
 type AccountDataSource struct {
-	client *smc.Client
+	client *smc.ClientWithResponses
 }
 
 // AccountDataSourceModel describes the data source data model.
@@ -100,7 +101,7 @@ func (d *AccountDataSource) Configure(ctx context.Context, req datasource.Config
 		return
 	}
 
-	client, ok := req.ProviderData.(*smc.Client)
+	client, ok := req.ProviderData.(*smc.ClientWithResponses)
 
 	if !ok {
 		resp.Diagnostics.AddError(
@@ -124,7 +125,7 @@ func (d *AccountDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	account, err := d.client.GetAccount(ctx, data.Identifier.ValueString())
+	account, err := d.client.GetApiAccountsUuidWithResponse(ctx, data.Identifier.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading SMC Account",
@@ -133,19 +134,50 @@ func (d *AccountDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	data.UUID = types.StringValue("uuid")
-	data.Description = types.StringValue("description")
-	data.DN = types.StringValue("dn")
-	data.Email = types.StringValue("email")
-	for _, folder := range account.Folders {
-		data.Folders = append(data.Folders, types.StringValue(folder))
+	if account.StatusCode() != http.StatusOK || account.JSON200 == nil {
+		return
 	}
-	data.Identifier = types.StringValue("identifier")
-	data.Kind = types.StringValue("kind")
-	data.LocalAuth = types.BoolValue("localAuth")
-	data.Name = types.StringValue("name")
-	for _, permission := range account.Permissions {
-		data.Permissions = append(data.Permissions, types.StringValue(permission))
+
+	data.UUID = types.StringValue(account.JSON200.Uuid)
+
+	if account.JSON200.Description != nil {
+		data.Description = types.StringValue(*account.JSON200.Description)
+	}
+
+	if account.JSON200.Dn != nil {
+		data.DN = types.StringValue(*account.JSON200.Dn)
+	}
+
+	if account.JSON200.Email != nil {
+		data.Email = types.StringValue(*account.JSON200.Email)
+	}
+
+	if account.JSON200.Folders != nil {
+		for _, folder := range *account.JSON200.Folders {
+			data.Folders = append(data.Folders, types.StringValue(folder))
+		}
+	}
+
+	if account.JSON200.Identifier != nil {
+		data.Identifier = types.StringValue(*account.JSON200.Identifier)
+	}
+
+	if account.JSON200.Kind != nil {
+		data.Kind = types.StringValue(*account.JSON200.Kind)
+	}
+
+	if account.JSON200.LocalAuth != nil {
+		data.LocalAuth = types.BoolValue(*account.JSON200.LocalAuth)
+	}
+
+	if account.JSON200.Name != nil {
+		data.Name = types.StringValue(*account.JSON200.Name)
+	}
+
+	if account.JSON200.Permissions != nil {
+		for _, permission := range *account.JSON200.Permissions {
+			data.Permissions = append(data.Permissions, types.StringValue(string(permission)))
+		}
 	}
 
 	// Save data into Terraform state
