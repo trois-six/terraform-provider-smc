@@ -68,4 +68,4 @@ require (
 	google.golang.org/protobuf v1.34.2 // indirect
 )
 
-replace github.com/trois-six/smc => ../smc
+// replace github.com/trois-six/smc => ../smc
