@@ -1,5 +1,4 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
 
 package provider
 
@@ -13,6 +12,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/trois-six/smc"
 )
 
@@ -34,27 +34,31 @@ type SMCProviderModel struct {
 }
 
 func (p *SMCProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
-	resp.TypeName = "SMC"
+	resp.TypeName = "smc"
 	resp.Version = p.version
 }
 
 func (p *SMCProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Interact with the SMC Management API",
 		Attributes: map[string]schema.Attribute{
 			"hostname": schema.StringAttribute{
-				MarkdownDescription: "Hostname to connect to the SMC Management API",
+				MarkdownDescription: "URI for the SMC Management API. May also be provided via SMC_HOSTNAME environment variable.",
+				Optional:            true,
 			},
 			"api_key": schema.StringAttribute{
-				MarkdownDescription: "API Key to connect to the SMC Management API",
+				MarkdownDescription: "API Key for the SMC Management API. May also be provided via SMC_API_KEY environment variable.",
 				Sensitive:           true,
+				Optional:            true,
 			},
 		},
 	}
 }
 
 func (p *SMCProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	var data SMCProviderModel
+	tflog.Info(ctx, "Configuring SMC client")
 
+	var data SMCProviderModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 
 	if resp.Diagnostics.HasError() {
@@ -117,8 +121,14 @@ func (p *SMCProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		return
 	}
 
+	ctx = tflog.SetField(ctx, "smc_hostname", hostname)
+	ctx = tflog.SetField(ctx, "smc_api_key", apiKey)
+	ctx = tflog.MaskFieldValuesWithFieldKeys(ctx, "smc_api_key")
+
+	tflog.Debug(ctx, "Creating SMC client")
+
 	// Create a new SMC client using the configuration values
-	client, err := smc.NewSMCClientWithResponses(hostname, apiKey)
+	client, err := smc.NewSMCClient(hostname, apiKey)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create SMC Client",
@@ -129,8 +139,12 @@ func (p *SMCProvider) Configure(ctx context.Context, req provider.ConfigureReque
 		return
 	}
 
+	// Make the SMC client available during DataSource and Resource
+	// type Configure methods.
 	resp.DataSourceData = client
 	resp.ResourceData = client
+
+	tflog.Info(ctx, "Configured SMC client", map[string]any{"success": true})
 }
 
 func (p *SMCProvider) Resources(ctx context.Context) []func() resource.Resource {

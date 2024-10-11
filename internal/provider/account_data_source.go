@@ -1,5 +1,4 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
 
 package provider
 
@@ -46,9 +45,7 @@ func (d *AccountDataSource) Metadata(ctx context.Context, req datasource.Metadat
 
 func (d *AccountDataSource) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		// This description is used by the documentation generator and the language server.
-		MarkdownDescription: "Account data source",
-
+		MarkdownDescription: "Fetches an account based on an identifier.",
 		Attributes: map[string]schema.Attribute{
 			"uuid": schema.StringAttribute{
 				MarkdownDescription: "Account uuid",
@@ -73,6 +70,7 @@ func (d *AccountDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 			},
 			"identifier": schema.StringAttribute{
 				MarkdownDescription: "Account identifier",
+				Required:            true,
 			},
 			"kind": schema.StringAttribute{
 				MarkdownDescription: "Account kind",
