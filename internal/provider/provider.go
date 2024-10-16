@@ -128,7 +128,7 @@ func (p *SMCProvider) Configure(ctx context.Context, req provider.ConfigureReque
 	tflog.Debug(ctx, "Creating SMC client")
 
 	// Create a new SMC client using the configuration values
-	client, err := smc.NewSMCClient(hostname, apiKey)
+	client, err := smc.NewSMCClientWithResponses(hostname, apiKey)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create SMC Client",
@@ -154,6 +154,7 @@ func (p *SMCProvider) Resources(ctx context.Context) []func() resource.Resource 
 func (p *SMCProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewAccountDataSource,
+		NewAccountsDataSource,
 	}
 }
 

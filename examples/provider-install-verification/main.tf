@@ -10,6 +10,10 @@ terraform {
 
 provider "smc" {}
 
-data "smc_account" "test" {
+data "smc_account" "jdoe" {
+  identifier = "jdoe"
+}
+
+data "smc_accounts" "all_accounts" {
   identifier = "jdoe"
 }
