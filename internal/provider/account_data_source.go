@@ -46,47 +46,47 @@ func (d *AccountDataSource) Metadata(ctx context.Context, req datasource.Metadat
 
 func getAccountDataSourceSchemaAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
-		"uuid": schema.StringAttribute{
-			MarkdownDescription: "Account uuid",
-			Computed:            true,
-		},
 		"description": schema.StringAttribute{
-			MarkdownDescription: "Account description",
+			MarkdownDescription: "The user's description",
 			Computed:            true,
 		},
 		"dn": schema.StringAttribute{
-			MarkdownDescription: "Account DN",
+			MarkdownDescription: "user's DN",
 			Computed:            true,
 		},
 		"email": schema.StringAttribute{
-			MarkdownDescription: "Account email",
+			MarkdownDescription: "Account's email",
 			Computed:            true,
 		},
 		"folders": schema.ListAttribute{
-			MarkdownDescription: "Account folders",
+			MarkdownDescription: "Array of folder rights",
 			Computed:            true,
 			ElementType:         types.StringType,
 		},
 		"identifier": schema.StringAttribute{
-			MarkdownDescription: "Account identifier",
+			MarkdownDescription: "the account's id (different from login if the user is member of a group)",
 			Required:            true,
 		},
 		"kind": schema.StringAttribute{
-			MarkdownDescription: "Account kind",
+			MarkdownDescription: "Type of account (user or group)",
 			Computed:            true,
 		},
 		"local_auth": schema.BoolAttribute{
-			MarkdownDescription: "Account local authentication",
+			MarkdownDescription: "does the user can use the local authentication",
 			Computed:            true,
 		},
 		"name": schema.StringAttribute{
-			MarkdownDescription: "Account name",
+			MarkdownDescription: "the user's name",
 			Computed:            true,
 		},
 		"permissions": schema.ListAttribute{
-			MarkdownDescription: "Account permissions",
+			MarkdownDescription: "Array of access rights",
 			Computed:            true,
 			ElementType:         types.StringType,
+		},
+		"uuid": schema.StringAttribute{
+			MarkdownDescription: "Account uuid",
+			Computed:            true,
 		},
 	}
 }
@@ -109,9 +109,8 @@ func (d *AccountDataSource) Configure(ctx context.Context, req datasource.Config
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *smc.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *smc.ClientWithResponses, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
-
 		return
 	}
 
@@ -119,7 +118,6 @@ func (d *AccountDataSource) Configure(ctx context.Context, req datasource.Config
 }
 
 func readAccountDataSourceModel(data *AccountDataSourceModel, item *smc.DefinitionsAccountsAccountPropertiesWithoutPassword) {
-	data.UUID = types.StringValue(item.Uuid)
 	data.Description = types.StringPointerValue(item.Description)
 	data.DN = types.StringPointerValue(item.Dn)
 	data.Email = types.StringPointerValue(item.Email)
@@ -148,6 +146,8 @@ func readAccountDataSourceModel(data *AccountDataSourceModel, item *smc.Definiti
 		listValue, _ := types.ListValue(types.StringType, permissionAttrs)
 		data.Permissions = listValue
 	}
+
+	data.UUID = types.StringValue(item.Uuid)
 }
 
 func (d *AccountDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {

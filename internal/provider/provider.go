@@ -148,7 +148,9 @@ func (p *SMCProvider) Configure(ctx context.Context, req provider.ConfigureReque
 }
 
 func (p *SMCProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		NewAccountResource,
+	}
 }
 
 func (p *SMCProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
